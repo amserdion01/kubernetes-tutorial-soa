@@ -1,0 +1,50 @@
+# -------------------------------------
+# PostgreSQL Deployment
+# -------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres
+          env:
+            - name: POSTGRES_USER
+              value: "root"
+            - name: POSTGRES_PASSWORD
+              value: "root"
+            - name: POSTGRES_DB
+              value: "root"
+          ports:
+            - containerPort: 5432
+
+---
+# -------------------------------------
+# PostgreSQL Service
+# -------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  # 'ClusterIP' means only accessible within the cluster.
+  # Change to 'NodePort' or 'LoadBalancer' to expose outside.
+  type: LoadBalancer
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+

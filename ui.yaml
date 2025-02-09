@@ -1,0 +1,110 @@
+###############################################################################
+# 1) ConfigMap
+###############################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: next-env-config
+data:
+  NEXT_PUBLIC_IDENTITY_SERVICE_URL: "http://user-service:5550"
+  NEXT_PUBLIC_POST_SERVICE_URL: "http://post-service:5551"
+  NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: "http://notification-service:5552"
+  
+  IDENTITY_SERVICE_URL: "http://user-service:5550"
+  POST_SERVICE_URL: "http://post-service:5551"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:5552"
+  UPLOADTHING_TOKEN: '.'
+
+---
+###############################################################################
+# 2) Deployment
+###############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: next-frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: next-frontend
+  template:
+    metadata:
+      labels:
+        app: next-frontend
+    spec:
+      containers:
+        - name: next-frontend
+          # Replace this with your actual image name + tag
+          image: ui
+          imagePullPolicy: Never
+          # If your Next.js app listens on port 3000 in production:
+          ports:
+            - containerPort: 3000
+
+          # Inject environment variables from the ConfigMap
+          env:
+            - name: NEXT_PUBLIC_IDENTITY_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: next-env-config
+                  key: NEXT_PUBLIC_IDENTITY_SERVICE_URL
+
+            - name: NEXT_PUBLIC_POST_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: next-env-config
+                  key: NEXT_PUBLIC_POST_SERVICE_URL
+
+            - name: NEXT_PUBLIC_NOTIFICATION_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: next-env-config
+                  key: NEXT_PUBLIC_NOTIFICATION_SERVICE_URL
+
+            - name: IDENTITY_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: next-env-config
+                  key: IDENTITY_SERVICE_URL
+
+            - name: POST_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: next-env-config
+                  key: POST_SERVICE_URL
+
+            - name: NOTIFICATION_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: next-env-config
+                  key: NOTIFICATION_SERVICE_URL
+
+            - name: UPLOADTHING_TOKEN
+              valueFrom:
+                configMapKeyRef:
+                  name: next-env-config
+                  key: UPLOADTHING_TOKEN
+
+
+---
+###############################################################################
+# 3) Service
+###############################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: next-frontend-service
+spec:
+  selector:
+    app: next-frontend
+
+  # Use ClusterIP if it's only accessed within the cluster (e.g., behind an Ingress).
+  # Or NodePort/LoadBalancer if you want direct external access.
+  type: NodePort
+
+  ports:
+    - name: http
+      port: 80         # Exposed service port
+      targetPort: 3000 # Container port
+      nodePort: 30081  # NodePort (must be 30000-32767 if you want external requests)

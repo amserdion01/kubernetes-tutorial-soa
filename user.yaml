@@ -1,0 +1,79 @@
+###############################################################################
+# 1) ConfigMap
+###############################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-config
+data:
+  application.properties: |-
+    spring.application.name=user
+    server.port=5550
+    management.endpoints.web.base-path=/public
+    management.endpoints.web.exposure.include=*
+
+    spring.datasource.url=jdbc:postgresql://postgres-service:5432/postgres
+    spring.datasource.username=root
+    spring.datasource.password=root
+    spring.datasource.driver-class-name=org.postgresql.Driver
+
+    spring.jpa.hibernate.ddl-auto=update
+    spring.jpa.show-sql=false
+    spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+    server.error.include-stacktrace=on_param
+    internal.service.token=super-secret-internal-service-account-token
+    jwt.secret=asdhuiopasasdasdhjklasdhjkasdhuiopasasdasdhjklasdhjkasdhuiopasasdasdhjklasdhjkasdhuiopasasdasdhjklasdhjk
+
+---
+###############################################################################
+# 2) Deployment
+###############################################################################
+###############################################################################
+# 2) Deployment
+###############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+        - name: user-container
+          # Your local image
+          image: user
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5550
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config  # so /config/application.properties is available
+      volumes:
+        - name: config-volume
+          configMap:
+            name: user-config  # references the ConfigMap with application.properties
+
+---
+###############################################################################
+# 3) Service
+###############################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  selector:
+    app: user
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 5550
+      targetPort: 5550

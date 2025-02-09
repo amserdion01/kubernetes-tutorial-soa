@@ -1,0 +1,90 @@
+###############################################################################
+# 1) ConfigMap
+###############################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-config
+data:
+  application.properties: |-
+    spring.application.name=notification
+    server.port=5552
+    management.endpoints.web.base-path=/public
+    management.endpoints.web.exposure.include=*
+
+    # Connect to Postgres via its Service DNS
+    spring.datasource.url=jdbc:postgresql://postgres-service:5432/postgres
+    spring.datasource.username=root
+    spring.datasource.password=root
+    spring.datasource.driver-class-name=org.postgresql.Driver
+
+    spring.jpa.hibernate.ddl-auto=update
+    spring.jpa.show-sql=false
+    spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+    server.error.include-stacktrace=on_param
+    internal.service.token=super-secret-internal-service-account-token
+
+    # RabbitMQ (assuming 'rabbitmq-service' at port 4321)
+    spring.rabbitmq.host=rabbitmq-service
+    spring.rabbitmq.port=4321
+    spring.rabbitmq.username=user
+    spring.rabbitmq.password=password
+
+    jwt.secret=asdhuiopasasdasdhjklasdhjkasdhuiopasasdasdhjklasdhjkasdhuiopasasdasdhjklasdhjkasdhuiopasasdasdhjklasdhjk
+---
+###############################################################################
+# 2) Deployment
+###############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      labels:
+        app: notification
+    spec:
+      containers:
+        - name: notification-container
+          # Assumes you have a local Docker image named "notification"
+          image: notification
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5552
+
+          # Pass extra param to load from /config/application.properties
+          args:
+            - "-Dspring.config.additional-location=file:/config/application.properties"
+            - "-jar"
+            # Make sure the path & name match your Docker image’s JAR
+            - "/app/notification-service.jar"
+
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: notification-config
+---
+###############################################################################
+# 3) Service
+###############################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+spec:
+  selector:
+    app: notification
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 5552
+      targetPort: 5552

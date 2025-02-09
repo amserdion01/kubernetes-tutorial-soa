@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-ingress
+  annotations:
+    # This annotation is an example if you're using the NGINX Ingress Controller
+    # and want to strip the /user, /post, /notification path prefix before
+    # forwarding. If you don't want to strip paths, remove it.
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /user(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service        # must match your Service name
+                port:
+                  number: 5550           # service port
+
+          - path: /post(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: post-service
+                port:
+                  number: 5551
+
+          - path: /notification(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 5552
